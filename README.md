@@ -8,6 +8,7 @@ A clean TRMNL plugin that shows upcoming calendar events from one or more iCal f
 - Lets you assign a custom name to each calendar.
 - Uses Basic Auth credentials for protected calendar endpoints.
 - Displays event time and title in a compact list.
+- Adapts automatically to every TRMNL layout: `full`, `half_horizontal`, `half_vertical`, and `quadrant`. Font sizes, row heights, and the number of visible events are tuned per layout so the view stays readable on any slot.
 
 ## Preview
 
