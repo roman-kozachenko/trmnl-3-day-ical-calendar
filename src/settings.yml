@@ -12,10 +12,10 @@ polling_url: |-
   {{ url | strip }}?export&start={{ "now" | date: "%s" }}&end={{ "now" | date: "%s" | plus: 15552000 }}&expand=1
   {% endfor %}
 polling_headers: |-
-  {% assign basic_raw = username | append= ":" | append= password %}
+  {% assign basic_raw = username | append: ":" | append: password %}
   {% assign basic_auth = basic_raw | base64_encode %}
 
-  Authorization= Basic {{ basic_auth }}
+  Authorization: Basic {{ basic_auth }}
 refresh_interval: 60
 id: null
 custom_fields:
