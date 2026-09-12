@@ -337,10 +337,10 @@
                     grid-template-rows: auto auto 1fr;
                     width: 100%;
                     height: 100%;
+                    position: relative;
                 }
 
                 #{{ $scope }} .corner {
-                    border-right: 1px solid #000;
                     border-bottom: 1px solid #000;
                 }
 
@@ -356,10 +356,25 @@
                     overflow: hidden;
                 }
 
-                #{{ $scope }} .day-header.today,
-                #{{ $scope }} .calendar-header.today,
-                #{{ $scope }} .day-column.today {
-                    background: #c0c0c0;
+                /*
+                 * The current day is always the leftmost block ($days[0]),
+                 * highlighted via an absolutely-positioned overlay frame.
+                 * Using `position: absolute` (rather than an explicit grid
+                 * placement) keeps the frame out of the auto-placement
+                 * algorithm — otherwise it would occupy today's grid cells
+                 * and push the real day headers / columns elsewhere.
+                 * Coordinates: right after the time axis, one third of the
+                 * remaining width, full height of the grid.
+                 */
+                #{{ $scope }} .today-frame {
+                    position: absolute;
+                    top: 0;
+                    left: var(--left-width);
+                    width: calc((100% - var(--left-width)) / 3);
+                    height: 100%;
+                    border: 2px solid #000;
+                    pointer-events: none;
+                    z-index: 10;
                 }
 
                 #{{ $scope }} .day-name {
@@ -396,6 +411,9 @@
                     position: relative;
                     min-height: 0;
                     overflow: hidden;
+                }
+
+                #{{ $scope }} .day-column {
                     border-right: 1px solid #000;
                 }
 
@@ -545,6 +563,9 @@
                         </div>
                     @endforeach
                 @endforeach
+
+                {{-- Bold frame overlay for today (always the first day block). --}}
+                <div class="today-frame"></div>
             </div>
         </div>
     </x-trmnl::layout>
