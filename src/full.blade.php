@@ -5,12 +5,13 @@
     use Illuminate\Support\Str;
 
     // ─── Configuration ─────────────────────────────────────────────────────
-    $tz = config('app.timezone');
+    $tz            = config('app.timezone');
+    $daysCount     = 3;   // rolling window: today + ($daysCount - 1) more days
     $dayStartHour  = 8;
     $dayEndHour    = 22;
     $now           = Carbon::now($tz);
     $periodStart   = $now->copy()->startOfDay();
-    $periodEnd     = $periodStart->copy()->addDays(3)->endOfDay();
+    $periodEnd     = $periodStart->copy()->addDays($daysCount)->endOfDay();
 
     // ─── Settings ──────────────────────────────────────────────────────────
     $settings = $trmnl['plugin_settings']['custom_fields_values'] ?? [];
@@ -140,8 +141,8 @@
         }
     }
 
-    // ─── Days axis (today + next two) ─────────────────────────────────────
-    $days = collect(range(0, 2))->map(function ($offset) use ($periodStart, $now) {
+    // ─── Days axis (today + next $daysCount - 1) ─────────────────────────
+    $days = collect(range(0, $daysCount - 1))->map(function ($offset) use ($periodStart, $now) {
         $date = $periodStart->copy()->addDays($offset);
 
         return [
@@ -244,10 +245,10 @@
             'fontDate'             => 16,
             'fontCalendar'         => 8,
             'fontTime'             => 9,
-            'fontEvent'            => 10,
+            'fontEvent'            => 20,
             'leftWidth'            => 38,
             'eventPadding'         => 2,
-            'minEventHeight'       => 14,
+            'minEventHeight'       => 28,
         ],
 
         'half_horizontal' => [
@@ -257,10 +258,10 @@
             'fontDate'             => 12,
             'fontCalendar'         => 6,
             'fontTime'             => 7,
-            'fontEvent'            => 7,
+            'fontEvent'            => 14,
             'leftWidth'            => 28,
             'eventPadding'         => 1,
-            'minEventHeight'       => 10,
+            'minEventHeight'       => 20,
         ],
 
         'half_vertical' => [
@@ -270,10 +271,10 @@
             'fontDate'             => 12,
             'fontCalendar'         => 6,
             'fontTime'             => 7,
-            'fontEvent'            => 7,
+            'fontEvent'            => 14,
             'leftWidth'            => 28,
             'eventPadding'         => 1,
-            'minEventHeight'       => 12,
+            'minEventHeight'       => 24,
         ],
 
         'quadrant' => [
@@ -283,18 +284,20 @@
             'fontDate'             => 9,
             'fontCalendar'         => 5,
             'fontTime'             => 6,
-            'fontEvent'            => 6,
+            'fontEvent'            => 12,
             'leftWidth'            => 22,
             'eventPadding'         => 0,
-            'minEventHeight'       => 8,
+            'minEventHeight'       => 16,
         ],
     ];
 
     $ui = $sizeConfig[$size] ?? $sizeConfig['full'];
 
-    $periodLabel = $periodStart->format('M j')
-        . ' – '
-        . $periodStart->copy()->addDays(2)->format('M j');
+    $periodLabel = $daysCount <= 1
+        ? $periodStart->format('M j')
+        : $periodStart->format('M j')
+            . ' – '
+            . $periodStart->copy()->addDays($daysCount - 1)->format('M j');
 
     $scope = 'three-day-calendar-' . Str::random(6);
 @endphp
@@ -333,7 +336,7 @@
                     display: grid;
                     grid-template-columns:
                         var(--left-width)
-                        repeat({{ $calendarCount * 3 }}, minmax(0, 1fr));
+                        repeat({{ $calendarCount * $daysCount }}, minmax(0, 1fr));
                     grid-template-rows: auto auto 1fr;
                     width: 100%;
                     height: 100%;
@@ -370,7 +373,7 @@
                     position: absolute;
                     top: 0;
                     left: var(--left-width);
-                    width: calc((100% - var(--left-width)) / 3);
+                    width: calc((100% - var(--left-width)) / {{ $daysCount }});
                     height: 100%;
                     border: 2px solid #000;
                     pointer-events: none;
