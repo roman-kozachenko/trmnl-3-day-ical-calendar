@@ -12,7 +12,7 @@ A clean TRMNL plugin that shows upcoming calendar events from one or more iCal f
 
 ## Preview
 
-<img src="https://raw.githubusercontent.com/derkalle4/trmnl-simple-ical-calendar/refs/heads/main/preview.png" alt="Preview Image" title="Preview image" style="max-width: 100%; height: auto;" />
+<img src="./preview.png" alt="Preview Image" title="Preview image" style="max-width: 100%; height: auto;" />
 
 ## Installation
 
