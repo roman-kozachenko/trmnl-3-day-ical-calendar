@@ -5,10 +5,11 @@
     use Illuminate\Support\Str;
 
     // ─── Configuration ─────────────────────────────────────────────────────
-    $tz            = config('app.timezone');
-    $daysCount     = 3;   // rolling window: today + ($daysCount - 1) more days
-    $dayStartHour  = 8;
-    $dayEndHour    = 22;
+    $tz              = config('app.timezone');
+    $daysCount       = 3;   // rolling window: today + ($daysCount - 1) more days
+    $dayStartHour    = 8;
+    $dayEndHour      = 22;
+    $eventFontScale  = 2;   // multiplier applied to event font size and min height
     $now           = Carbon::now($tz);
     $periodStart   = $now->copy()->startOfDay();
     $periodEnd     = $periodStart->copy()->addDays($daysCount)->endOfDay();
@@ -239,59 +240,64 @@
     // ─── Per-size UI tuning ───────────────────────────────────────────────
     $sizeConfig = [
         'full' => [
-            'dayHeaderHeight'      => 38,
+            'dayHeaderHeight'      => 48,
             'calendarHeaderHeight' => 22,
-            'fontDay'              => 12,
-            'fontDate'             => 16,
+            'fontDay'              => 14,
+            'fontDate'             => 30,
             'fontCalendar'         => 8,
-            'fontTime'             => 9,
-            'fontEvent'            => 20,
-            'leftWidth'            => 38,
+            'fontTime'             => 14,
+            'fontEvent'            => 10,
+            'leftWidth'            => 22,
             'eventPadding'         => 2,
-            'minEventHeight'       => 28,
+            'minEventHeight'       => 14,
         ],
 
         'half_horizontal' => [
-            'dayHeaderHeight'      => 30,
+            'dayHeaderHeight'      => 36,
             'calendarHeaderHeight' => 18,
-            'fontDay'              => 9,
-            'fontDate'             => 12,
+            'fontDay'              => 11,
+            'fontDate'             => 22,
             'fontCalendar'         => 6,
-            'fontTime'             => 7,
-            'fontEvent'            => 14,
-            'leftWidth'            => 28,
+            'fontTime'             => 10,
+            'fontEvent'            => 7,
+            'leftWidth'            => 16,
             'eventPadding'         => 1,
-            'minEventHeight'       => 20,
+            'minEventHeight'       => 10,
         ],
 
         'half_vertical' => [
-            'dayHeaderHeight'      => 30,
+            'dayHeaderHeight'      => 36,
             'calendarHeaderHeight' => 18,
-            'fontDay'              => 9,
-            'fontDate'             => 12,
+            'fontDay'              => 11,
+            'fontDate'             => 22,
             'fontCalendar'         => 6,
-            'fontTime'             => 7,
-            'fontEvent'            => 14,
-            'leftWidth'            => 28,
+            'fontTime'             => 10,
+            'fontEvent'            => 7,
+            'leftWidth'            => 16,
             'eventPadding'         => 1,
-            'minEventHeight'       => 24,
+            'minEventHeight'       => 12,
         ],
 
         'quadrant' => [
-            'dayHeaderHeight'      => 22,
+            'dayHeaderHeight'      => 26,
             'calendarHeaderHeight' => 14,
-            'fontDay'              => 6,
-            'fontDate'             => 9,
+            'fontDay'              => 8,
+            'fontDate'             => 16,
             'fontCalendar'         => 5,
-            'fontTime'             => 6,
-            'fontEvent'            => 12,
-            'leftWidth'            => 22,
+            'fontTime'             => 8,
+            'fontEvent'            => 6,
+            'leftWidth'            => 14,
             'eventPadding'         => 0,
-            'minEventHeight'       => 16,
+            'minEventHeight'       => 8,
         ],
     ];
 
     $ui = $sizeConfig[$size] ?? $sizeConfig['full'];
+
+    // Apply the event font scale on top of the size-specific defaults.
+    // minEventHeight scales with the font so short events still fit their text.
+    $ui['fontEvent']       = (int) round($ui['fontEvent'] * $eventFontScale);
+    $ui['minEventHeight']  = (int) round($ui['minEventHeight'] * $eventFontScale);
 
     $periodLabel = $daysCount <= 1
         ? $periodStart->format('M j')
@@ -337,7 +343,12 @@
                     grid-template-columns:
                         var(--left-width)
                         repeat({{ $calendarCount * $daysCount }}, minmax(0, 1fr));
-                    grid-template-rows: auto auto 1fr;
+                    /*
+                     * With multiple calendars per day we render a second
+                     * header row for their labels; with a single calendar
+                     * that row is redundant, so collapse the template.
+                     */
+                    grid-template-rows: {{ $calendarCount > 1 ? 'auto auto 1fr' : 'auto 1fr' }};
                     width: 100%;
                     height: 100%;
                     position: relative;
@@ -427,8 +438,21 @@
                     transform: translateY(-50%);
                     text-align: right;
                     font-size: var(--font-time);
+                    font-weight: 700;
                     line-height: 1;
                     color: #000;
+                }
+
+                /*
+                 * Keep the topmost and bottommost hour labels fully inside
+                 * the axis instead of being half-clipped by overflow: hidden.
+                 */
+                #{{ $scope }} .time-label-first {
+                    transform: none;
+                }
+
+                #{{ $scope }} .time-label-last {
+                    transform: translateY(-100%);
                 }
 
                 #{{ $scope }} .hour-line,
@@ -463,12 +487,13 @@
                     font-size: var(--font-event);
                     font-weight: 600;
                     line-height: 1.05;
-                    overflow-wrap: anywhere;
                     min-height: var(--min-event-height);
                 }
 
                 #{{ $scope }} .event-title {
                     overflow: hidden;
+                    white-space: nowrap;
+                    text-overflow: clip;
                 }
             </style>
 
@@ -491,31 +516,36 @@
                     </div>
                 @endforeach
 
-                {{-- Row 2: calendar sub-headers ---------------------------------------- --}}
-                <div class="corner"></div>
+                {{-- Row 2: calendar sub-headers (skipped when there's only one calendar) --}}
+                @if ($calendarCount > 1)
+                    <div class="corner"></div>
 
-                @foreach ($days as $day)
-                    @foreach ($calendarBuckets as $calendarIndex => $bucket)
-                        @php
-                            $calendarName = $names->get($calendarIndex)
-                                ?: 'CAL ' . ($calendarIndex + 1);
-                        @endphp
+                    @foreach ($days as $day)
+                        @foreach ($calendarBuckets as $calendarIndex => $bucket)
+                            @php
+                                $calendarName = $names->get($calendarIndex)
+                                    ?: 'CAL ' . ($calendarIndex + 1);
+                            @endphp
 
-                        <div class="calendar-header {{ $day['is_today'] ? 'today' : '' }}">
-                            {{ $calendarName }}
-                        </div>
+                            <div class="calendar-header {{ $day['is_today'] ? 'today' : '' }}">
+                                {{ $calendarName }}
+                            </div>
+                        @endforeach
                     @endforeach
-                @endforeach
+                @endif
 
                 {{-- Row 3: time axis + day/calendar grids ------------------------------ --}}
                 <div class="time-column">
                     @for ($hour = $dayStartHour; $hour <= $dayEndHour; $hour++)
                         @php
                             $top = (($hour - $dayStartHour) / ($dayEndHour - $dayStartHour)) * 100;
+                            $edgeClass = $hour === $dayStartHour
+                                ? 'time-label-first'
+                                : ($hour === $dayEndHour ? 'time-label-last' : '');
                         @endphp
 
-                        <div class="time-label" style="top: {{ $top }}%;">
-                            {{ sprintf('%02d:00', $hour) }}
+                        <div class="time-label {{ $edgeClass }}" style="top: {{ $top }}%;">
+                            {{ $hour }}
                         </div>
                     @endfor
                 </div>
